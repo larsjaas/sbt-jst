@@ -1,6 +1,6 @@
 sbtPlugin := true
 
-organization := "com.matthewrennie.sbt"
+organization := "net.matthewrennie.sbt"
 
 name := "sbt-jst"
 

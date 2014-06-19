@@ -1,4 +1,4 @@
-package com.matthewrennie.sbt.jst
+package net.matthewrennie.sbt.jst
 
 import sbt._
 import sbt.Keys._
