@@ -1,0 +1,4 @@
+# Compile a template
+
+> assets
+$ exists target/web/public/main/templates.js

@@ -1,0 +1,3 @@
+# Compile a template file with errors
+-> assets
+$ exists target/failed-to-compile
