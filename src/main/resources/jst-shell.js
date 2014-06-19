@@ -118,7 +118,7 @@
           templateOptions = {};
 
         compiled = _.template(contents, false, templateOptions).source;
-        if (options.prettify) {
+        if (!options.prettify) {
           compiled = compiled.replace(/\n/g, '');
         }
 
