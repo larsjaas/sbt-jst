@@ -8,13 +8,13 @@ To use the latest version from Github, add the following to the `project/plugins
 ```scala
     lazy val root = project.in(file(".")).dependsOn(sbtJst)
     lazy val sbtJst = uri("git://github.com/matthewrennie/sbt-jst")
-```scala
+```
 
 Your project's build file also needs to enable sbt-web plugins. For example with build.sbt:
 
 ```scala
     lazy val root = (project in file(".")).enablePlugins(SbtWeb)
-```scala
+```
 
 The following option are supported:
 
