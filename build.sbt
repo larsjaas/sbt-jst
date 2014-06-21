@@ -17,8 +17,7 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-	"org.webjars" % "mkdirp" % "0.3.5",
-	"org.webjars" % "underscorejs-node" % "1.6.0-4"  
+	"org.webjars" % "mkdirp" % "0.3.5"	
 )
 
 addSbtPlugin("com.typesafe.sbt" %% "sbt-js-engine" % "1.0.0")

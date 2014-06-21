@@ -69,7 +69,7 @@ object SbtJst extends AutoPlugin {
         taskMessage in TestAssets := "Jst test compiling"
       )
   ) ++ SbtJsTask.addJsSourceFileTasks(jst) ++ Seq(
-    jst in Assets := (jst in Assets).dependsOn(webModules in Assets).value,
+    jst in Assets := (jst in Assets).dependsOn(webModules in Assets).dependsOn(WebKeys.nodeModules in Assets).value,
     jst in TestAssets := (jst in TestAssets).dependsOn(webModules in TestAssets).value
   )
 
