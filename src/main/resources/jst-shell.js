@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (c) 2012 Tyler Kellen, contributors
  * Licensed under the MIT license.
  *
@@ -60,7 +60,7 @@
       writeOutput()
   }
 
-  function writeDone() {    
+  function writeDone() {
     console.log("\u0010" + JSON.stringify({
       results: results,
       problems: problems
@@ -130,24 +130,24 @@
             filesRead: [inputFile],
             filesWritten: [outputFile]
           }
-        });      
+        });
 
       } catch (e) {
 
-        problems.push({          
+        problems.push({
           message: inputFile + " failed to compile",
-          severity: "error",          
+          severity: "error",
           source: inputFile
         });
 
         results.push({
           source: inputFile,
           result: null
-        });        
+        });
 
       }
 
-      parseDone()            
+      parseDone()
 
     })
 
