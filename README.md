@@ -1,13 +1,15 @@
 sbt-jst
-========
+=======
+
+This is an experimental fork of http://github.com/matthewrennie/sbt-jst.
 
 [sbt-web](https://github.com/sbt/sbt-web) plugin that precompiles [Underscore](http://underscorejs.org) templates to JST files. Based on [grunt-contrib-jst](https://www.npmjs.org/package/grunt-contrib-jst).
 
-To use the latest version from Github, add the following to the `project/plugins.sbt` of your project:
+To use my version from Github, add the following to the `project/plugins.sbt` of your project:
 
 ```scala
     lazy val root = project.in(file(".")).dependsOn(sbtJst)
-    lazy val sbtJst = uri("git://github.com/matthewrennie/sbt-jst")
+    lazy val sbtJst = uri("git://github.com/larsjaas/sbt-jst")
 ```
 
 Your project's build file also needs to enable sbt-web plugins. For example with build.sbt:
