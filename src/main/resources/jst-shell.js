@@ -36,7 +36,6 @@
   var outputFile = path.join(target, options.outputPath);
 
   function getNamespaceDeclaration(ns) {
-
     var output = [];
     var curPath = 'this';
     if (ns !== 'this') {
@@ -48,6 +47,13 @@
         }
       });
     }
+    output.push('  var _ns = ' + curPath + ';');
+    output.push('');
+    output.push('  var _instate = function(n,args){');
+    output.push('    var f = _ns[n+"_s"];');
+    output.push('    try{eval("_ns[n]="+f);}catch(e){console.log("error:"+e.message);return "";}');
+    output.push('    return _ns[n].apply(this,args);');
+    output.push('  };');
     return {
       namespace: curPath,
       declaration: output.join('\n')
@@ -55,23 +61,84 @@
 
   };
 
-  function parseDone() {
-    if (--sourcesToProcess === 0)
-      writeOutput()
-  }
-
-  function writeDone() {
-    console.log("\u0010" + JSON.stringify({
-      results: results,
-      problems: problems
-    }));
+  function parseDone(filename) {
+    if (--sourcesToProcess === 0) {
+      writeOutput(filename)
+    }
   }
 
   function throwIfErr(e) {
     if (e) throw e;
   }
 
-  function writeOutput() {
+  function doUnlock() {
+    //fs.unlink(options.outputPath+".lck");
+    fs.unlink("file.lck");
+  }
+
+  function writeDone(path) {
+    console.log("\u0010" + JSON.stringify({
+      results: results,
+      problems: problems
+    }));
+    doUnlock(path);
+  }
+
+
+  function lockOutput(currentFile, then, count) {
+    if (!count) count = 1;
+    //fs.symlink(options.outputPath+".lck", options.outputPath, function(e) {
+    fs.symlink("file", "file.lck", function(e) {
+      if (e) {
+          if (count > 60) {
+              console.log("failed lock-acquiring 60 times");
+              throw "unable to symlink file.lck: " + e.message;
+          }
+          setTimeout( function() { lockOutput(currentFile, then, count + 1); }, 200);
+      }
+      else {
+          console.log("jst: updating " + currentFile);
+          then(currentFile);
+      }
+    });
+  }
+
+  function writeOutput(currentFile) {
+    lockOutput(currentFile, writeOutputAfterLocked);
+  }
+
+  function writeOutputAfterLocked(filename) {
+    var outputFile = path.join(target, options.outputPath);
+    var jst = {};
+    fs.readFile(outputFile, "utf8", function(e, contents) {
+      if (!e) {
+        try {
+          var define = define || function(arg) { return arg; }
+          var jst = eval(contents);
+          jst = jst();
+          writeOutputAfterLockedWithJST(filename, jst);
+        }
+        catch(e) {
+          console.log("readFile eval() error: " + e.message);
+          writeOutputAfterLockedWithJST(filename, {});
+        }
+      } else {
+        if (e.message.indexOf("ENOENT") != 0)
+          console.log("read error: " + e.message);
+        writeOutputAfterLockedWithJST(filename, {});
+      }
+    });
+  }
+
+  function writeOutputAfterLockedWithJST(filename, jst) {
+
+    _.forEach(_.keys(jst), function(key) {
+        if (key != filename && key.indexOf("_s") != -1) {
+          var name = key.substring(0, key.length-7);
+          output.push(nsInfo.namespace + '[' + JSON.stringify(key) + '] = ' + JSON.stringify(jst[key]) + ';');
+          output.push(nsInfo.namespace + '[' + JSON.stringify(name) + '] = ' + instateTemplate(name) + ';');
+        }
+    });
 
     output.unshift(nsInfo.declaration);
 
@@ -87,14 +154,18 @@
     }
 
     mkdirp(path.dirname(outputFile), function(e) {
-
-      fs.writeFile(outputFile, output.join(options.separator), "utf8", function(e) {
-        throwIfErr(e);
-
-        writeDone();
-
+      fs.truncate(outputFile,0,function(e) {
+          // throwIfErr(e);
+          fs.writeFile(outputFile, output.join(options.separator), "utf8", function(e) {
+            throwIfErr(e);
+            writeDone(filename);
+          });
       });
-    })
+    });
+  }
+
+  function instateTemplate(name) {
+    return "function(){return _instate('" + name + "',arguments);}";
   }
 
   sourceFileMappings.forEach(function(sourceFileMapping) {
@@ -117,12 +188,13 @@
         else
           templateOptions = {};
 
-        compiled = _.template(contents, false, templateOptions).source;
+        compiled = _.template(contents, null, templateOptions).source;
         if (!options.prettify) {
           compiled = compiled.replace(/\n/g, '');
         }
 
-        output.push(nsInfo.namespace + '[' + JSON.stringify(filename) + '] = ' + compiled + ';')
+        output.push(nsInfo.namespace + '[' + JSON.stringify(filename) + '] = ' + instateTemplate(filename) + ';');
+        output.push(nsInfo.namespace + '[' + JSON.stringify(filename+"_s") + '] = ' + JSON.stringify(compiled) + ';');
 
         results.push({
           source: inputFile,
@@ -147,9 +219,9 @@
 
       }
 
-      parseDone()
+      parseDone(filename);
 
-    })
+    });
 
   });
 
