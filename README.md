@@ -28,7 +28,8 @@ interpolate         | The interpolate setting passed to underscore when compilin
 prettify            | easy-to-read format that has one line per template.
 amd                 | Wraps the output file with an AMD define function.
 outputPath          | The target relative url path for jst output.
-    
+aggregate           | Read in the output file to aggregate templates.
+
 The following sbt code illustrates how to wrap an output file with an AMD define function
 
 ```scala
@@ -40,3 +41,14 @@ To include all html files for precompilation, use:
 ```scala
 includeFilter in (Assets, JstKeys.jst) := "*.html"
 ```
+
+Dependencies
+============
+
+If you get problems with dependencies in node, try the commands below that look relevant:
+
+```sh
+npm install underscore --save
+npm install promise --save
+```
+

@@ -18,6 +18,7 @@ object Import {
     val prettify = SettingKey[Boolean]("jst-prettify", "easy-to-read format that has one line per template. Default: false")
     val amd = SettingKey[Boolean]("jst-amd", "Wraps the output file with an AMD define function. Default: false")
     val outputPath = SettingKey[String]("jst-output", "The target relative url path for jst output. Defaults to ./templates.js")
+    val aggregate = SettingKey[Boolean]("jst-aggregate", "Aggregate templates from multiple runs by re-reading the output file. Default: true")
 
   }
 
@@ -39,13 +40,14 @@ object SbtJst extends AutoPlugin {
   val jstUnscopedSettings = Seq(
     includeFilter := GlobFilter("*.html"),
 
-    jsOptions := JsObject(   
+    jsOptions := JsObject(
       "separator" -> JsString(separator.value),
       "namespace" -> JsString(namespace.value),
       "interpolate" -> JsString(interpolate.value),
-      "prettify" -> JsBoolean(prettify.value),      
+      "prettify" -> JsBoolean(prettify.value),
       "amd" -> JsBoolean(amd.value),
-      "outputPath" -> JsString(outputPath.value)
+      "outputPath" -> JsString(outputPath.value),
+      "aggregate" -> JsBoolean(aggregate.value)
     ).toString()
   )
 
@@ -55,8 +57,8 @@ object SbtJst extends AutoPlugin {
     interpolate := "",
     prettify := false,
     amd := false,
-    outputPath := "./templates.js"
-
+    outputPath := "./templates.js",
+    aggregate := true
   ) ++ inTask(jst) (
     SbtJsTask.jsTaskSpecificUnscopedSettings ++
       inConfig(Assets)(jstUnscopedSettings) ++
