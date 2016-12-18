@@ -29,31 +29,43 @@
   var options = JSON.parse(args[OPTIONS_ARG]);
 
   var sourcesToProcess = sourceFileMappings.length;
-  var results = [];
-  var problems = [];
+
   var output = [];
-  var namespace = "this[\"JST\"]";
+  var namespace = "this[\"JST\"]"; // default
   var outputFile = path.join(target, options.outputPath);
 
+  var results = [];
+  var problems = [];
+
+  var logSuccess = function(file) {
+    results.push({
+      source: file,
+      result: {
+        filesRead: [file],
+        filesWritten: [outputFile]
+      }
+    });
+  };
+
+  var logError = function(file, message) {
+    problems.push({
+      message: message,
+      severity: "error",
+      source: file
+    });
+    results.push({
+      source: file,
+      result: null
+    });
+  };
+
+  var indent = options.amd ? "  " : "";
   var jst = {};
   var tmplnames = [];
   var tmplfullnames = [];
   var templates = [];
 
   var readTemplate = function(mapping) {
-    // console.log("readTemplate");
-    var logError = function(file, message) {
-      problems.push({
-        message: message,
-        severity: "error",
-        source: file
-      });
-      results.push({
-        source: file,
-        result: null
-      });
-    };
-
     var input = mapping[0], filename = mapping[1];
     return new Promise(function(resolve, reject) {
       fs.readFile(input, "utf-8", function(err, contents) {
@@ -80,28 +92,26 @@
   };
 
   var acquireTargetLock = function() {
-    // console.log("acquireTargetLock");
     return new Promise(function(resolve, reject) {
-      // console.log("mkdirp " + path.dirname(outputFile));
       mkdirp(path.dirname(outputFile), function(e) {
         if (e) reject(e);
         else {
           var lockOutput = function(iterations, delay) {
             if (iterations > 0) {
-              fs.symlink('/dev/null', outputFile+".lock", function(e) { // FIXME: platforms
+              fs.symlink('/dev/null', outputFile+".lock", function(e) { // FIXME: crossplatform?
                 if (e && e.message.lastIndexOf("EEXIST",0) == 0) {
                   setTimeout(function(){lockOutput(iterations-1, delay);}, delay);
                 } else if (e) {
                   console.log("symlink error: " + e);
                   setTimeout(function(){lockOutput(iterations-1, delay);}, delay);
                 } else {
-                  // console.log("acquired lock the new way");
                   resolve();
                 }
               });
             } else {
-              // FIXME: push onto problems[]
-              reject("could not aquire lock");
+              logError(tmplnames[0], "could not acquire lock");
+              reject("could not acquire lock");
+
             }
           }
           lockOutput(100, 50);
@@ -123,7 +133,8 @@
             var preset = eval(contents)();
             _.keys(preset).forEach(function(key) {
               if (_.includes(tmplnames, key)) {
-                jst[key] = templates[0]; // FIXME: index
+                var idx = _.indexOf(tmplnames, key);
+                jst[key] = templates[idx];
               }
               else {
                 jst[key] = preset[key];
@@ -136,7 +147,7 @@
             reject(e.message);
           }
         } else {
-          if (e.message.lastIndexOf("ENOENT",0) == 0) // this is ok
+          if (e.message.lastIndexOf("ENOENT", 0) == 0) // this is ok
             resolve();
           else
             reject(e.message);
@@ -148,7 +159,6 @@
   var composeHeader = function() {
     return new Promise(function(resolve, reject) {
       var header = [];
-      var indent = options.amd ? "  " : "";
       if (options.amd) {
         header.push("define([],function(){");
       }
@@ -174,16 +184,14 @@
         if (!options.prettify) {
           template = template.replace(/ *\n */g, '');
         } else {
-          template = template.replace(/\n/g, '\n  ');
+          template = template.replace(/\n/g, '\n' + indent);
           template = template.replace(/ *\n */, '');
           template = template.replace(/}\n *$/, '}');
         }
         return template;
     };
-
     return new Promise(function(resolve, reject) {
       var data = [];
-      var indent = options.amd ? "  " : "";
       _.keys(jst).forEach(function(key, idx) {
         var template = prettify(jst[key].toString());
         data.push(indent + namespace + '["' + key + '"] = ' + template + ';');
@@ -207,7 +215,7 @@
         return;
       }
       var footer = [];
-      footer.push("  return " + namespace + ";");
+      footer.push(indent + "return " + namespace + ";");
       footer.push("});");
       footer.push("");
       output.push(footer.join("\n"));
@@ -217,11 +225,9 @@
 
   var writeOutputFile = function() {
     return new Promise(function(resolve, reject) {
-      // console.log("mkdirp " + path.dirname(outputFile));
       mkdirp(path.dirname(outputFile), function(e) {
         if (e) reject(e);
         else {
-          // console.log("truncate " + outputFile);
           fs.truncate(outputFile, 0, function(e) {
             if (e) {
               if (e.message.lastIndexOf("ENOENT",0) != 0) {
@@ -229,20 +235,14 @@
                 return;
               }
             }
-            // console.log("writeFile " + outputFile);
             fs.writeFile(outputFile, output.join(options.separator), "utf8", function(e) {
               if (e) {
                 console.log("write error: " + e);
                 reject(e);
               }
               else {
-                // console.log("wrote " + outputFile);
-                results.push({ // FIXME: forEach
-                  source: tmplfullnames[0],
-                  result: {
-                    filesRead: [tmplfullnames[0]],
-                    filesWritten: [outputFile]
-                  }
+                tmplfullnames.forEach(function(fullname, idx) {
+                  logSuccess(fullname);
                 });
                 resolve();
               }
@@ -254,18 +254,15 @@
   };
 
   var releaseTargetLock = function() {
-    // console.log("releaseTargetLock");
     return new Promise(function(resolve, reject) {
-      // console.log("unlocking");
       fs.unlink(outputFile + ".lock", function(err) {
-        if (err) reject(err.message);
+        if (err) reject(err.message); // should we just resolve regardless?
         else resolve();
       });
     });
   };
 
   var writeConsoleResults = function() {
-    // console.log("writeConsoleResults");
     return new Promise(function(resolve, reject) {
       console.log("\u0010" + JSON.stringify({
         results: results,
@@ -303,5 +300,4 @@
     .then(writeConsoleResults)
     .then(completed)
     .done();
-
 })()
