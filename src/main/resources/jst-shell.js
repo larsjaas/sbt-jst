@@ -202,7 +202,7 @@
 
   var composeFooter = function() {
     return new Promise(function(resolve, reject) {
-      if (options.amd) {
+      if (!options.amd) {
         resolve();
         return;
       }
