@@ -38,11 +38,12 @@
   var problems = [];
 
   var logSuccess = function(file) {
+    var outputs = options.gzipOptions ? [outputFile, outputFile + ".gz"] : [outputFile];
     results.push({
       source: file,
       result: {
         filesRead: [file],
-        filesWritten: [outputFile]
+        filesWritten: outputs
       }
     });
   };
@@ -253,6 +254,23 @@
     });
   };
 
+  var compressOutputFile = function() {
+    return new Promise(function(resolve, reject) {
+      if (!options.gzipOptions) {
+        resolve();
+        return;
+      }
+      var exec = require('child_process').exec;
+      var cmd = 'gzip -9fk ' + outputFile;
+      exec(cmd, function(e, stdout, stderr) {
+        if (e)
+          reject(e);
+        else
+          resolve();
+      });
+    });
+  };
+
   var releaseTargetLock = function() {
     return new Promise(function(resolve, reject) {
       fs.unlink(outputFile + ".lock", function(err) {
@@ -274,7 +292,8 @@
 
   var completed = function() {
     return new Promise(function(resolve, reject) {
-      console.log("compiled underscore template for " + tmplnames[0]);
+      if (problems.length === 0)
+        console.log("compiled underscore template for " + tmplnames[0]);
       resolve();
     });
   };
@@ -295,7 +314,8 @@
     .then(composeHeader)
     .then(composeTemplates)
     .then(composeFooter)
-    .then(writeOutputFile).catch(enterThenChainAgain)
+    .then(writeOutputFile)
+    .then(compressOutputFile).catch(enterThenChainAgain)
     .then(releaseTargetLock)
     .then(writeConsoleResults)
     .then(completed)

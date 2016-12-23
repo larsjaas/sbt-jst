@@ -19,6 +19,7 @@ object Import {
     val amd = SettingKey[Boolean]("jst-amd", "Wraps the output file with an AMD define function. Default: false")
     val outputPath = SettingKey[String]("jst-output", "The target relative url path for jst output. Defaults to ./templates.js")
     val aggregate = SettingKey[Boolean]("jst-aggregate", "Aggregate templates from multiple runs by re-reading the output file. Default: true")
+    val gzipOptions = SettingKey[String]("jst-gzipoptions", "The options to use for gzip. Defaults to ''.")
 
   }
 
@@ -47,7 +48,8 @@ object SbtJst extends AutoPlugin {
       "prettify" -> JsBoolean(prettify.value),
       "amd" -> JsBoolean(amd.value),
       "outputPath" -> JsString(outputPath.value),
-      "aggregate" -> JsBoolean(aggregate.value)
+      "aggregate" -> JsBoolean(aggregate.value),
+      "gzipOptions" -> JsString(gzipOptions.value)
     ).toString()
   )
 
@@ -58,7 +60,8 @@ object SbtJst extends AutoPlugin {
     prettify := false,
     amd := false,
     outputPath := "./templates.js",
-    aggregate := true
+    aggregate := true,
+    gzipOptions := ""
   ) ++ inTask(jst) (
     SbtJsTask.jsTaskSpecificUnscopedSettings ++
       inConfig(Assets)(jstUnscopedSettings) ++
